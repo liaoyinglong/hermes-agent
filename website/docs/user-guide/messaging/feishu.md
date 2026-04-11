@@ -18,7 +18,7 @@ The integration supports both connection modes:
 | Context | Behavior |
 |---------|----------|
 | Direct messages | Hermes responds to every message. |
-| Group chats | Hermes responds only when the bot is @mentioned in the chat. |
+| Group chats | Hermes responds only when the bot is @mentioned in the chat (default). Set `FEISHU_REQUIRE_MENTION=false` to respond to all allowed group messages. |
 | Shared group chats | By default, session history is isolated per user inside a shared chat. |
 
 This shared-chat behavior is controlled by `config.yaml`:

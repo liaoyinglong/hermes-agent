@@ -699,6 +699,14 @@ class TestAdapterBehavior(unittest.TestCase):
                 calls.append("card_action")
                 return self
 
+            def register_p2_im_chat_member_bot_added_v1(self, _handler):
+                calls.append("bot_added")
+                return self
+
+            def register_p2_im_chat_member_bot_deleted_v1(self, _handler):
+                calls.append("bot_deleted")
+                return self
+
             def build(self):
                 calls.append("build")
                 return "handler"
@@ -722,6 +730,8 @@ class TestAdapterBehavior(unittest.TestCase):
                 "reaction_created",
                 "reaction_deleted",
                 "card_action",
+                "bot_added",
+                "bot_deleted",
                 "build",
             ],
         )
@@ -826,6 +836,20 @@ class TestAdapterBehavior(unittest.TestCase):
 
         message_with_mention = SimpleNamespace(mentions=[SimpleNamespace(key="@_user_1")])
         self.assertFalse(adapter._should_accept_group_message(message_with_mention, sender_id, ""))
+
+    @patch.dict(
+        os.environ,
+        {"FEISHU_GROUP_POLICY": "open", "FEISHU_REQUIRE_MENTION": "false"},
+        clear=True,
+    )
+    def test_group_message_without_mention_allowed_when_require_mention_disabled(self):
+        from gateway.config import PlatformConfig
+        from gateway.platforms.feishu import FeishuAdapter
+
+        adapter = FeishuAdapter(PlatformConfig())
+        sender_id = SimpleNamespace(open_id="ou_any", user_id=None)
+        message = SimpleNamespace(mentions=[])
+        self.assertTrue(adapter._should_accept_group_message(message, sender_id, ""))
 
     @patch.dict(os.environ, {"FEISHU_GROUP_POLICY": "open"}, clear=True)
     def test_group_message_with_other_user_mention_is_rejected_when_bot_identity_unknown(self):

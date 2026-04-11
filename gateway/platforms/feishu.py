@@ -262,6 +262,7 @@ class FeishuAdapterSettings:
     bot_open_id: str
     bot_user_id: str
     bot_name: str
+    require_mention: bool
     dedup_cache_size: int
     text_batch_delay_seconds: float
     text_batch_split_delay_seconds: float
@@ -387,6 +388,25 @@ def _coerce_int(value: Any, default: Optional[int] = None, min_value: int = 0) -
 def _coerce_required_int(value: Any, default: int, min_value: int = 0) -> int:
     parsed = _coerce_int(value, default=default, min_value=min_value)
     return default if parsed is None else parsed
+
+
+def _coerce_bool(value: Any, default: bool) -> bool:
+    """Coerce value to bool with sensible string/int parsing and fallback default."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        if value == 1:
+            return True
+        if value == 0:
+            return False
+    if value is None:
+        return default
+    raw = str(value).strip().lower()
+    if raw in {"1", "true", "yes", "on"}:
+        return True
+    if raw in {"0", "false", "no", "off"}:
+        return False
+    return default
 
 
 # ---------------------------------------------------------------------------
@@ -1104,6 +1124,7 @@ class FeishuAdapter(BasePlatformAdapter):
             bot_open_id=os.getenv("FEISHU_BOT_OPEN_ID", "").strip(),
             bot_user_id=os.getenv("FEISHU_BOT_USER_ID", "").strip(),
             bot_name=os.getenv("FEISHU_BOT_NAME", "").strip(),
+            require_mention=_coerce_bool(os.getenv("FEISHU_REQUIRE_MENTION", "true"), default=True),
             dedup_cache_size=max(
                 32,
                 int(os.getenv("HERMES_FEISHU_DEDUP_CACHE_SIZE", str(_DEFAULT_DEDUP_CACHE_SIZE))),
@@ -1159,6 +1180,7 @@ class FeishuAdapter(BasePlatformAdapter):
         self._bot_open_id = settings.bot_open_id
         self._bot_user_id = settings.bot_user_id
         self._bot_name = settings.bot_name
+        self._require_mention = settings.require_mention
         self._dedup_cache_size = settings.dedup_cache_size
         self._text_batch_delay_seconds = settings.text_batch_delay_seconds
         self._text_batch_split_delay_seconds = settings.text_batch_split_delay_seconds
@@ -3021,9 +3043,11 @@ class FeishuAdapter(BasePlatformAdapter):
         return bool(sender_ids and (sender_ids & self._allowed_group_users))
 
     def _should_accept_group_message(self, message: Any, sender_id: Any, chat_id: str = "") -> bool:
-        """Require an explicit @mention before group messages enter the agent."""
+        """Gate group messages by policy and optional @mention requirement."""
         if not self._allow_group_message(sender_id, chat_id):
             return False
+        if not self._require_mention:
+            return True
         # @_all is Feishu's @everyone placeholder — always route to the bot.
         raw_content = getattr(message, "content", "") or ""
         if "@_all" in raw_content:
