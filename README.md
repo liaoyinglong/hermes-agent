@@ -146,11 +146,16 @@ Quick start for contributors:
 ```bash
 git clone https://github.com/NousResearch/hermes-agent.git
 cd hermes-agent
-curl -LsSf https://astral.sh/uv/install.sh | sh
-uv venv venv --python 3.11
-source venv/bin/activate
-uv pip install -e ".[all,dev]"
+mise install                 # installs python/node from mise.toml
+source venv/bin/activate     # venv auto-created by mise
+pip install -e ".[all,dev]"
 python -m pytest tests/ -q
+```
+
+If you don't have `mise` yet, install it first:
+
+```bash
+curl https://mise.run | sh
 ```
 
 > **RL Training (optional):** To work on the RL/Tinker-Atropos integration:
